@@ -1,0 +1,174 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulasi Kasir</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 16px;
+      background: #f4f6f8;
+    }
+    h1 { color: #174ea6; }
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th { background: #dbeafe; }
+    .total {
+      font-size: 24px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Simulasi Sistem Kasir</h1>
+  <p>Data produk dari Google Sheets</p>
+
+  <input id="cari" placeholder="Cari nama barang...">
+
+  <label for="urut">Urutkan:</label>
+  <select id="urut">
+    <option value="nama">Nama barang</option>
+    <option value="harga">Harga termurah</option>
+    <option value="stok">Stok terbanyak</option>
+  </select>
+
+  <p id="status">Memuat data...</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Kode</th>
+        <th>Nama Barang</th>
+        <th>Harga</th>
+        <th>Stok</th>
+        <th>Jumlah</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody id="daftar"></tbody>
+  </table>
+
+  <p class="total">
+    Total: <span id="total">Rp0</span>
+  </p>
+
+  <script>
+    // Ganti dengan URL Web App milikmu
+    const API_URL = "https://script.googleusercontent.com/a/macros/polman-bandung.ac.id/echo?user_content_key=AUkAhnTljugKW11GKlhnSvGfB9sA0ia09w5IN-r--dls7J-y4XtI0KkVPaT1RpWIVe4_sz_tIlUWQCxqqDqhjGV0Afa-Gb-PJdR4NhnlC_lck-iRGtuUKJ7t2K2sZogffODABqq0sPf6A0y0JH4y7ttB9iR_9-T3_CMDgwoBwsYtvXowIa8kNoOjO5S-X0kgNldZfHTbhyf5do_A2pXhvzt1gw48acI8hEdO0Z7i-8UTt7644GYJ2Xbvx84cxj8mwlTQyU08tUKCKN57kim73sUs7hTZyuDDEllVaAVAY1KZqrKRjPRYyHAisiAvufGykg&lib=MtnM8csxYibfVgsq6o2jSrLsdSGrnZ9J6";
+
+    let produk = [];
+
+    const rupiah = angka =>
+      "Rp" + angka.toLocaleString("id-ID");
+
+    async function muatData() {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Gagal mengambil data");
+
+        produk = await response.json();
+
+        if (!Array.isArray(produk)) {
+          throw new Error(produk.error || "Format data salah");
+        }
+
+        document.getElementById("status").textContent =
+          "Data berhasil dimuat: " + produk.length + " produk";
+
+        tampilkan();
+      } catch (error) {
+        document.getElementById("status").textContent =
+          "Gagal memuat data. Periksa URL dan akses API.";
+        console.error(error);
+      }
+    }
+
+    function tampilkan() {
+      const kata = document.getElementById("cari")
+        .value.toLowerCase();
+      const urut = document.getElementById("urut").value;
+
+      const hasil = produk
+        .filter(p => p.nama.toLowerCase().includes(kata))
+        .sort((a, b) =>
+          urut === "nama"
+            ? a.nama.localeCompare(b.nama)
+            : a[urut] - b[urut]
+        );
+
+      const daftar = document.getElementById("daftar");
+      daftar.innerHTML = "";
+
+      hasil.forEach((p) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.kode}</td>
+          <td>${p.nama}</td>
+          <td>${rupiah(p.harga)}</td>
+          <td>${p.stok}</td>
+          <td>
+            <input type="number" min="0" max="${p.stok}"
+              value="0" style="width:60px">
+          </td>
+          <td>Rp0</td>
+        `;
+
+        const jumlah = tr.querySelector("input");
+        const subtotal = tr.cells[5];
+
+        jumlah.addEventListener("input", () => {
+          const qty = Math.min(
+            p.stok,
+            Math.max(0, Number(jumlah.value) || 0)
+          );
+          jumlah.value = qty;
+          subtotal.textContent = rupiah(qty * p.harga);
+          hitungTotal();
+        });
+
+        daftar.appendChild(tr);
+      });
+
+      hitungTotal();
+    }
+
+    function hitungTotal() {
+      let total = 0;
+
+      document.querySelectorAll("#daftar tr").forEach(tr => {
+        const hargaText = tr.cells[2].textContent;
+        const harga = Number(
+          hargaText.replace("Rp", "").replace(/\./g, "")
+        );
+        const jumlah = Number(tr.querySelector("input").value) || 0;
+        total += harga * jumlah;
+      });
+
+      document.getElementById("total").textContent = rupiah(total);
+    }
+
+    document.getElementById("cari")
+      .addEventListener("input", tampilkan);
+    document.getElementById("urut")
+      .addEventListener("change", tampilkan);
+
+    muatData();
+  </script>
+</body>
+</html>

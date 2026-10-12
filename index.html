@@ -4,169 +4,547 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Simulasi Kasir</title>
+  <title>DawnProject - Sistem Kasir</title>
+
   <style>
+    * { box-sizing: border-box; }
+
     body {
       font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: 30px auto;
+      max-width: 1100px;
+      margin: 25px auto;
       padding: 16px;
-      background: #f4f6f8;
+      background: #f1f5f9;
+      color: #1e293b;
     }
+
     h1 { color: #174ea6; }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px #0000000d;
+    }
+
     input, select, button {
       padding: 10px;
-      margin: 5px 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
     }
+
+    input { max-width: 100%; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .field input { width: 100%; }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .toolbar input { flex: 1; min-width: 180px; }
+
+    .table-wrap { overflow-x: auto; }
+
     table {
       width: 100%;
       border-collapse: collapse;
       background: white;
     }
+
     th, td {
       padding: 12px;
-      border: 1px solid #ddd;
+      border: 1px solid #e2e8f0;
       text-align: left;
     }
+
     th { background: #dbeafe; }
+
+    .qty { width: 75px; }
+
     .total {
-      font-size: 24px;
+      font-size: 25px;
       font-weight: bold;
+      color: #174ea6;
+    }
+
+    .payment {
+      background: #eff6ff;
+      padding: 18px;
+      border-radius: 10px;
+    }
+
+    .change {
+      font-size: 22px;
+      font-weight: bold;
+      color: #15803d;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .primary {
+      background: #1d4ed8;
+      color: white;
+      border: none;
+    }
+
+    .secondary { background: #e2e8f0; }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    #pesan {
+      margin: 12px 0;
+      font-weight: bold;
+    }
+
+    #struk {
+      display: none;
+      background: white;
+      padding: 20px;
+      max-width: 420px;
+      margin: 20px auto;
+      border: 1px dashed #64748b;
+      color: black;
+    }
+
+    #struk h2, #struk p { text-align: center; }
+
+    .receipt-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 8px 0;
+    }
+
+    .receipt-items {
+      width: 100%;
+      font-size: 13px;
+    }
+
+    .receipt-items th, .receipt-items td {
+      padding: 5px;
+      border: none;
+      border-bottom: 1px dashed #ccc;
+    }
+
+    @media print {
+      body * { visibility: hidden !important; }
+
+      #struk, #struk * {
+        visibility: visible !important;
+      }
+
+      #struk {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 80mm;
+        margin: 0;
+        padding: 5mm;
+        border: none;
+        box-shadow: none;
+      }
+
+      @page {
+        size: 80mm auto;
+        margin: 3mm;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body { margin: 10px auto; padding: 10px; }
+      .card { padding: 12px; }
     }
   </style>
 </head>
+
 <body>
-  <h1>Simulasi Sistem Kasir</h1>
-  <p>Data produk dari Google Sheets</p>
+  <h1>DawnProject - Sistem Kasir</h1>
+  <p>Simulasi kasir dengan data produk dari Google Sheets</p>
 
-  <input id="cari" placeholder="Cari nama barang...">
+  <section class="card">
+    <h2>1. Identitas Kasir</h2>
+    <div class="field">
+      <label for="namaKasir">Nama kasir</label>
+      <input id="namaKasir" placeholder="Masukkan nama kasir">
+    </div>
+  </section>
 
-  <label for="urut">Urutkan:</label>
-  <select id="urut">
-    <option value="nama">Nama barang</option>
-    <option value="harga">Harga termurah</option>
-    <option value="stok">Stok terbanyak</option>
-  </select>
+  <section class="card">
+    <h2>2. Pilih Barang</h2>
 
-  <p id="status">Memuat data...</p>
+    <div class="toolbar">
+      <input id="cari" placeholder="Cari nama barang...">
 
-  <table>
-    <thead>
-      <tr>
-        <th>Kode</th>
-        <th>Nama Barang</th>
-        <th>Harga</th>
-        <th>Stok</th>
-        <th>Jumlah</th>
-        <th>Subtotal</th>
-      </tr>
-    </thead>
-    <tbody id="daftar"></tbody>
-  </table>
+      <select id="urut" aria-label="Urutkan produk">
+        <option value="nama">Urutkan: Nama</option>
+        <option value="harga">Harga termurah</option>
+        <option value="stok">Stok terbanyak</option>
+      </select>
+    </div>
 
-  <p class="total">
-    Total: <span id="total">Rp0</span>
-  </p>
+    <p id="status">Memuat data produk...</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Kode</th>
+            <th>Nama Barang</th>
+            <th>Harga</th>
+            <th>Stok</th>
+            <th>Jumlah</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody id="daftar"></tbody>
+      </table>
+    </div>
+
+    <p class="total">Total: <span id="total">Rp0</span></p>
+  </section>
+
+  <section class="card payment">
+    <h2>3. Pembayaran</h2>
+
+    <div class="field">
+      <label for="uangBayar">Uang yang diberikan pelanggan (Rp)</label>
+      <input id="uangBayar" type="number" min="0" step="1"
+        placeholder="Contoh: 50000">
+    </div>
+
+    <p>Total belanja: <strong id="totalBayar">Rp0</strong></p>
+    <p>Kembalian: <span class="change" id="kembalian">Rp0</span></p>
+
+    <button id="proses" class="primary" disabled>
+      Proses Pembayaran
+    </button>
+
+    <button id="transaksiBaru" class="secondary" hidden>
+      Transaksi Baru
+    </button>
+
+    <p id="pesan" role="status" aria-live="polite"></p>
+  </section>
+
+  <section id="struk">
+    <h2>DAW NPROJECT</h2>
+    <p>STRUK PEMBELIAN</p>
+    <hr>
+
+    <div class="receipt-line">
+      <span>No. Transaksi</span>
+      <span id="rNomor"></span>
+    </div>
+    <div class="receipt-line">
+      <span>Tanggal</span>
+      <span id="rTanggal"></span>
+    </div>
+    <div class="receipt-line">
+      <span>Kasir</span>
+      <span id="rKasir"></span>
+    </div>
+
+    <hr>
+
+    <table class="receipt-items">
+      <thead>
+        <tr>
+          <th>Barang</th>
+          <th>Qty</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody id="rDaftar"></tbody>
+    </table>
+
+    <hr>
+    <div class="receipt-line">
+      <strong>Total</strong>
+      <strong id="rTotal"></strong>
+    </div>
+    <div class="receipt-line">
+      <span>Tunai</span>
+      <span id="rTunai"></span>
+    </div>
+    <div class="receipt-line">
+      <span>Kembalian</span>
+      <span id="rKembalian"></span>
+    </div>
+
+    <hr>
+    <p>Terima kasih atas kunjungan Anda!</p>
+    <p>Barang yang sudah dibeli mohon diperiksa.</p>
+  </section>
+
+  <div style="text-align:center; margin-bottom:30px">
+    <button id="cetak" class="primary" hidden>
+      Cetak Struk
+    </button>
+  </div>
 
   <script>
-    // Ganti dengan URL Web App milikmu
+    // Gunakan URL Web App yang sudah berhasil diuji.
+    // Jika URL berubah, ganti dengan URL deployment terbaru.
     const API_URL = "https://script.googleusercontent.com/a/macros/polman-bandung.ac.id/echo?user_content_key=AUkAhnTljugKW11GKlhnSvGfB9sA0ia09w5IN-r--dls7J-y4XtI0KkVPaT1RpWIVe4_sz_tIlUWQCxqqDqhjGV0Afa-Gb-PJdR4NhnlC_lck-iRGtuUKJ7t2K2sZogffODABqq0sPf6A0y0JH4y7ttB9iR_9-T3_CMDgwoBwsYtvXowIa8kNoOjO5S-X0kgNldZfHTbhyf5do_A2pXhvzt1gw48acI8hEdO0Z7i-8UTt7644GYJ2Xbvx84cxj8mwlTQyU08tUKCKN57kim73sUs7hTZyuDDEllVaAVAY1KZqrKRjPRYyHAisiAvufGykg&lib=MtnM8csxYibfVgsq6o2jSrLsdSGrnZ9J6";
 
     let produk = [];
+    let jumlahBeli = {};
+    let transaksiSelesai = false;
+
+    const el = id => document.getElementById(id);
 
     const rupiah = angka =>
       "Rp" + angka.toLocaleString("id-ID");
 
+    function totalBelanja() {
+      return produk.reduce((total, p) => {
+        return total + p.harga * (jumlahBeli[p.kode] || 0);
+      }, 0);
+    }
+
+    function barangDipilih() {
+      return produk.filter(p => (jumlahBeli[p.kode] || 0) > 0);
+    }
+
     async function muatData() {
       try {
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error("Gagal mengambil data");
+        if (!response.ok) throw new Error("HTTP " + response.status);
 
-        produk = await response.json();
-
-        if (!Array.isArray(produk)) {
-          throw new Error(produk.error || "Format data salah");
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          throw new Error(data.error || "Format data tidak valid");
         }
 
-        document.getElementById("status").textContent =
-          "Data berhasil dimuat: " + produk.length + " produk";
+        produk = data.map(p => ({
+          kode: String(p.kode),
+          nama: String(p.nama),
+          harga: Number(p.harga),
+          stok: Number(p.stok)
+        }));
+
+        if (produk.some(p =>
+          !p.kode || !p.nama ||
+          !Number.isFinite(p.harga) || p.harga < 0 ||
+          !Number.isInteger(p.stok) || p.stok < 0
+        )) {
+          throw new Error("Ada data produk yang tidak valid");
+        }
+
+        el("status").textContent =
+          "Data berhasil dimuat: " + produk.length + " produk.";
 
         tampilkan();
       } catch (error) {
-        document.getElementById("status").textContent =
-          "Gagal memuat data. Periksa URL dan akses API.";
+        el("status").textContent =
+          "Gagal memuat produk. Periksa URL API dan izinnya.";
         console.error(error);
       }
     }
 
     function tampilkan() {
-      const kata = document.getElementById("cari")
-        .value.toLowerCase();
-      const urut = document.getElementById("urut").value;
+      const kata = el("cari").value.toLowerCase();
+      const urut = el("urut").value;
 
       const hasil = produk
         .filter(p => p.nama.toLowerCase().includes(kata))
-        .sort((a, b) =>
-          urut === "nama"
-            ? a.nama.localeCompare(b.nama)
-            : a[urut] - b[urut]
+        .sort((a, b) => urut === "nama"
+          ? a.nama.localeCompare(b.nama)
+          : a[urut] - b[urut]);
+
+      const daftar = el("daftar");
+      daftar.replaceChildren();
+
+      hasil.forEach(p => {
+        const tr = document.createElement("tr");
+
+        function cell(text) {
+          const td = document.createElement("td");
+          td.textContent = text;
+          tr.appendChild(td);
+          return td;
+        }
+
+        cell(p.kode);
+        cell(p.nama);
+        cell(rupiah(p.harga));
+        cell(String(p.stok));
+
+        const tdJumlah = document.createElement("td");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = "0";
+        input.max = String(p.stok);
+        input.step = "1";
+        input.value = String(jumlahBeli[p.kode] || 0);
+        input.className = "qty";
+        input.setAttribute("aria-label", "Jumlah " + p.nama);
+        tdJumlah.appendChild(input);
+        tr.appendChild(tdJumlah);
+
+        const tdSubtotal = cell(
+          rupiah(p.harga * (jumlahBeli[p.kode] || 0))
         );
 
-      const daftar = document.getElementById("daftar");
-      daftar.innerHTML = "";
+        input.addEventListener("input", () => {
+          const raw = input.value;
 
-      hasil.forEach((p) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${p.kode}</td>
-          <td>${p.nama}</td>
-          <td>${rupiah(p.harga)}</td>
-          <td>${p.stok}</td>
-          <td>
-            <input type="number" min="0" max="${p.stok}"
-              value="0" style="width:60px">
-          </td>
-          <td>Rp0</td>
-        `;
+          if (raw === "") {
+            jumlahBeli[p.kode] = 0;
+          } else {
+            const n = Number(raw);
+            if (!Number.isInteger(n) || n < 0 || n > p.stok) {
+              el("pesan").textContent =
+                "Jumlah " + p.nama + " harus antara 0 dan " + p.stok + ".";
+              input.value = String(jumlahBeli[p.kode] || 0);
+              return;
+            }
+            jumlahBeli[p.kode] = n;
+          }
 
-        const jumlah = tr.querySelector("input");
-        const subtotal = tr.cells[5];
-
-        jumlah.addEventListener("input", () => {
-          const qty = Math.min(
-            p.stok,
-            Math.max(0, Number(jumlah.value) || 0)
-          );
-          jumlah.value = qty;
-          subtotal.textContent = rupiah(qty * p.harga);
-          hitungTotal();
+          tdSubtotal.textContent =
+            rupiah(p.harga * (jumlahBeli[p.kode] || 0));
+          el("pesan").textContent = "";
+          perbaruiPembayaran();
         });
 
         daftar.appendChild(tr);
       });
 
-      hitungTotal();
+      perbaruiPembayaran();
     }
 
-    function hitungTotal() {
-      let total = 0;
+    function perbaruiPembayaran() {
+      const total = totalBelanja();
+      const uang = Number(el("uangBayar").value) || 0;
 
-      document.querySelectorAll("#daftar tr").forEach(tr => {
-        const hargaText = tr.cells[2].textContent;
-        const harga = Number(
-          hargaText.replace("Rp", "").replace(/\./g, "")
-        );
-        const jumlah = Number(tr.querySelector("input").value) || 0;
-        total += harga * jumlah;
+      el("total").textContent = rupiah(total);
+      el("totalBayar").textContent = rupiah(total);
+      el("kembalian").textContent =
+        rupiah(Math.max(0, uang - total));
+
+      el("proses").disabled =
+        transaksiSelesai ||
+        !el("namaKasir").value.trim() ||
+        barangDipilih().length === 0 ||
+        el("uangBayar").value === "" ||
+        uang < total;
+    }
+
+    function buatStruk() {
+      const sekarang = new Date();
+      const nomor = "TRX-" +
+        sekarang.getFullYear() +
+        String(sekarang.getMonth() + 1).padStart(2, "0") +
+        String(sekarang.getDate()).padStart(2, "0") + "-" +
+        String(sekarang.getHours()).padStart(2, "0") +
+        String(sekarang.getMinutes()).padStart(2, "0") +
+        String(sekarang.getSeconds()).padStart(2, "0");
+
+      el("rNomor").textContent = nomor;
+      el("rTanggal").textContent =
+        sekarang.toLocaleString("id-ID");
+      el("rKasir").textContent = el("namaKasir").value.trim();
+
+      const tbody = el("rDaftar");
+      tbody.replaceChildren();
+
+      barangDipilih().forEach(p => {
+        const tr = document.createElement("tr");
+
+        [p.nama, String(jumlahBeli[p.kode]),
+          rupiah(p.harga * jumlahBeli[p.kode])]
+          .forEach(text => {
+            const td = document.createElement("td");
+            td.textContent = text;
+            tr.appendChild(td);
+          });
+
+        tbody.appendChild(tr);
       });
 
-      document.getElementById("total").textContent = rupiah(total);
+      el("rTotal").textContent = rupiah(totalBelanja());
+      el("rTunai").textContent =
+        rupiah(Number(el("uangBayar").value));
+      el("rKembalian").textContent =
+        rupiah(Number(el("uangBayar").value) - totalBelanja());
+
+      el("struk").style.display = "block";
+      el("cetak").hidden = false;
     }
 
-    document.getElementById("cari")
-      .addEventListener("input", tampilkan);
-    document.getElementById("urut")
-      .addEventListener("change", tampilkan);
+    el("cari").addEventListener("input", tampilkan);
+    el("urut").addEventListener("change", tampilkan);
+    el("namaKasir").addEventListener("input", perbaruiPembayaran);
+    el("uangBayar").addEventListener("input", perbaruiPembayaran);
+
+    el("proses").addEventListener("click", () => {
+      if (transaksiSelesai) return;
+
+      const kasir = el("namaKasir").value.trim();
+      const dipilih = barangDipilih();
+      const total = totalBelanja();
+      const uang = Number(el("uangBayar").value);
+
+      if (!kasir) {
+        el("pesan").textContent = "Nama kasir wajib diisi.";
+        return;
+      }
+
+      if (dipilih.length === 0) {
+        el("pesan").textContent = "Pilih minimal satu barang.";
+        return;
+      }
+
+      if (!Number.isFinite(uang) || uang < total) {
+        el("pesan").textContent =
+          "Uang pembayaran tidak mencukupi.";
+        return;
+      }
+
+      buatStruk();
+      transaksiSelesai = true;
+      el("proses").disabled = true;
+      el("transaksiBaru").hidden = false;
+      el("pesan").textContent =
+        "Pembayaran berhasil. Struk siap dicetak.";
+    });
+
+    el("cetak").addEventListener("click", () => {
+      if (transaksiSelesai) window.print();
+    });
+
+    el("transaksiBaru").addEventListener("click", () => {
+      jumlahBeli = {};
+      transaksiSelesai = false;
+      el("namaKasir").value = "";
+      el("uangBayar").value = "";
+      el("struk").style.display = "none";
+      el("cetak").hidden = true;
+      el("transaksiBaru").hidden = true;
+      el("pesan").textContent = "";
+      tampilkan();
+    });
 
     muatData();
   </script>
